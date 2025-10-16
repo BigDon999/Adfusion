@@ -36,7 +36,7 @@ const Hero = () => {
         >
           <h1
             style={{
-              fontSize: "4rem",
+              fontSize: "3rem",
               marginBottom: "20px",
               lineHeight: "1.2",
               color: "#fff",

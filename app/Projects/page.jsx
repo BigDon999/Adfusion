@@ -77,6 +77,8 @@ export default function ProjectsPage() {
                   src: project.img,
                   title: project.title,
                 });
+              } else if (project.type === "video" && project.videoUrl) {
+                window.open(project.videoUrl, "_blank");
               }
             }}
           />

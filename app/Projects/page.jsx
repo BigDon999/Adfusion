@@ -1,38 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProjectCard from "../components/ProjectCard";
 
 export default function ProjectsPage() {
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Projects with type: 'image' or 'video'
-  const projects = [
-    {
-      id: 4,
-      title: "Visual Story Series",
-      img: "/assets/AI1.jpg",
-      type: "image",
-    },
-    {
-      id: 5,
-      title: "AI-Powered Design",
-      img: "/assets/AI1.jpg",
-      videoUrl: "https://vm.tiktok.com/ZNdWboL5r/",
-      type: "video",
-    },
-    {
-      id: 6,
-      title: "Marketing Imagery",
-      img: "/assets/AI1.jpg",
-      type: "image",
-    },
-    {
-      id: 7,
-      title: "Marketing Imagery",
-      img: "/assets/AI1.jpg",
-      type: "image",
-    },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => {
+        if (mounted) setProjects(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <section

@@ -1,0 +1,22 @@
+[
+  {
+    "id": 5,
+    "title": "AI-Powered Design",
+    "img": "/assets/AI1.jpg",
+    "videoUrl": "https://vm.tiktok.com/ZNdWboL5r/",
+    "type": "video"
+  },
+  {
+    "id": 6,
+    "title": "Marketing Imagery",
+    "img": "/assets/AI1.jpg",
+    "type": "image"
+  },
+  {
+    "title": "test2",
+    "img": "/assets/1760691065482_logo.png",
+    "type": "image",
+    "videoUrl": "",
+    "id": 7
+  }
+]

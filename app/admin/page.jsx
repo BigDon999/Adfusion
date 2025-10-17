@@ -113,28 +113,65 @@ export default function AdminPage() {
           onChange={async (e) => {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const base64 = (reader.result || "").toString();
-              // remove prefix
-              const match = base64.match(/^data:(.*);base64,(.*)$/);
-              const b64 = match ? match[2] : base64;
-              const filename = `${Date.now()}_${file.name.replace(
-                /[^a-zA-Z0-9.\-_]/g,
-                ""
-              )}`;
-              const res = await fetch("/api/upload", {
+
+            // sanitize filename and create a unique name
+            const filename = `${Date.now()}_${file.name.replace(
+              /[^a-zA-Z0-9.\-_]/g,
+              ""
+            )}`;
+
+            // Try presign + PUT (preferred for Vercel + S3)
+            try {
+              const presignRes = await fetch("/api/upload/presign", {
                 method: "POST",
-                body: JSON.stringify({ filename, data: b64 }),
+                body: JSON.stringify({ filename, contentType: file.type }),
               });
-              if (res.ok) {
-                const json = await res.json();
-                setForm((f) => ({ ...f, img: json.url }));
-              } else {
-                alert("Upload failed");
+              if (presignRes.ok) {
+                const { url, publicUrl } = await presignRes.json();
+                // PUT the file bytes to S3
+                const putRes = await fetch(url, {
+                  method: "PUT",
+                  headers: { "Content-Type": file.type },
+                  body: file,
+                });
+                if (!putRes.ok) throw new Error("PUT to S3 failed");
+                setForm((f) => ({ ...f, img: publicUrl }));
+                return;
               }
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+              console.warn(
+                "Presign+PUT failed, falling back to server upload",
+                err
+              );
+            }
+
+            // Fallback: read as base64 and POST to /api/upload (server will store locally or to S3)
+            try {
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const base64 = (reader.result || "").toString();
+                const match = base64.match(/^data:(.*);base64,(.*)$/);
+                const b64 = match ? match[2] : base64;
+                const res = await fetch("/api/upload", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    filename,
+                    data: b64,
+                    contentType: file.type,
+                  }),
+                });
+                if (res.ok) {
+                  const json = await res.json();
+                  setForm((f) => ({ ...f, img: json.url }));
+                } else {
+                  alert("Upload failed");
+                }
+              };
+              reader.readAsDataURL(file);
+            } catch (err) {
+              console.error("Fallback upload failed", err);
+              alert("Upload failed");
+            }
           }}
           style={inputStyle}
         />

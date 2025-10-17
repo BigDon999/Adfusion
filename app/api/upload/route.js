@@ -31,7 +31,7 @@ async function uploadToS3(filename, b64) {
       Bucket: bucket,
       Key: key,
       Body: buffer,
-      ContentType: "image/jpeg",
+      ContentType: "application/octet-stream",
       ACL: "public-read",
     })
   );
@@ -41,12 +41,23 @@ async function uploadToS3(filename, b64) {
 
 export async function POST(request) {
   const body = await request.json();
-  const { filename, data } = body; // data = base64 without data:prefix
+  const { filename, data, contentType } = body; // data = base64 without data:prefix
   if (!filename || !data) return new Response("Missing", { status: 400 });
+  const isVercel = Boolean(process.env.VERCEL);
+  // On Vercel serverless, filesystem is ephemeral; require S3 to be configured there.
+  if (isVercel && !(process.env.AWS_S3_BUCKET && process.env.AWS_REGION)) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Server is running on Vercel. Configure AWS_S3_BUCKET and AWS_REGION to enable uploads.",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     if (process.env.AWS_S3_BUCKET && process.env.AWS_REGION) {
-      const url = await uploadToS3(filename, data);
+      const url = await uploadToS3(filename, data, contentType || undefined);
       return new Response(JSON.stringify({ url }), {
         status: 201,
         headers: { "Content-Type": "application/json" },
@@ -56,9 +67,17 @@ export async function POST(request) {
     console.error("S3 upload failed, falling back to filesystem", e);
   }
 
-  const url = await uploadToFilesystem(filename, data);
-  return new Response(JSON.stringify({ url }), {
-    status: 201,
-    headers: { "Content-Type": "application/json" },
-  });
+  try {
+    const url = await uploadToFilesystem(filename, data);
+    return new Response(JSON.stringify({ url }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Filesystem upload failed", err);
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }

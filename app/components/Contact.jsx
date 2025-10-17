@@ -38,7 +38,7 @@ const Contact = () => {
 
       {/* Contact Form */}
       <form
-        action="https://formspree.io/f/yourFormID"
+        action="https://formspree.io/f/xnngwvjl"
         method="POST"
         style={{
           maxWidth: "600px",
